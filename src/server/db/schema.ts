@@ -1,36 +1,51 @@
-// Example model schema from the Drizzle docs
-// https://orm.drizzle.team/docs/sql-schema-declaration
-
 import { sql } from "drizzle-orm";
 import {
-  index,
   integer,
-  pgTableCreator,
   timestamp,
-  varchar,
+  text,
+  pgTable,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
-/**
- * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
- * database instance for multiple projects.
- *
- * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
- */
-export const createTable = pgTableCreator((name) => `social-manager_${name}`);
-
-export const posts = createTable(
+export const posts = pgTable(
   "post",
   {
     id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    name: varchar("name", { length: 256 }),
+    userId: text("user_id").notNull(),
+    platform: text("platform").notNull(), // "instagram", "youtube"
+    imageUrl: text("image_url").notNull(),
+    caption: text("caption"),
+    status: text("status").default("pending"), // "pending", "published", "failed"
+    scheduledAt: timestamp("scheduled_at").notNull(),
+    qstashMessageId: text("qstash_message_id"), // Store QStash message ID
     createdAt: timestamp("created_at", { withTimezone: true })
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-      () => new Date()
+      () => new Date(),
+    ),
+  }
+);
+
+export const connected_platforms = pgTable(
+  "connected_platform",
+  {
+    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+    userId: text("user_id").notNull(),
+    platform: text("platform").notNull(),
+    accessToken: text("access_token").notNull(),
+    refreshToken: text("refresh_token"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
+      () => new Date(),
     ),
   },
-  (example) => ({
-    nameIndex: index("name_idx").on(example.name),
-  })
+  (table) => {
+    return {
+      user_id_platform_idx: uniqueIndex("user_id_platform_idx")
+        .on(table.userId, table.platform)
+    }
+  }
 );
